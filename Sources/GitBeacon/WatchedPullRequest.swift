@@ -1,6 +1,6 @@
 import Foundation
 
-struct WatchedPullRequest: Identifiable, Equatable, Decodable {
+struct WatchedPullRequest: Identifiable, Equatable {
     let id: String // GraphQL node id
     let repo: String // "owner/name"
     let number: Int

@@ -3,7 +3,7 @@ import Foundation
 /// The lifecycle stages GitBeacon distinguishes visually. Order matters —
 /// `BeaconState` picks the single "worst" (most attention-needing) status
 /// across all watched PRs to drive the status bar indicator.
-enum PullRequestStatus: Int, Comparable, Decodable {
+enum PullRequestStatus: Int, Comparable {
     case merged
     case checksPassed
     case checksRunning

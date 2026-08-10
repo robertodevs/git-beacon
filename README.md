@@ -12,9 +12,10 @@ checks run, then a settled color once they land — green (passed), red
 ## Status
 
 Early scaffold. Status-item rendering, the polling loop, and the dropdown
-timeline are wired up; the actual GraphQL query (`GitHubGraphQLClient.query`)
-is a placeholder — it authenticates and reads the rate limit but doesn't
-yet fetch real PR/check-suite data.
+timeline are wired up, and `GitHubGraphQLClient` now sends a real batched
+query — one request per poll, aliasing every watched repo (`repo0`,
+`repo1`, ...) and pulling each open/merged PR's review decision and
+head-commit check-suite rollup. Untested against a live token so far.
 
 ## Requirements
 
@@ -56,12 +57,12 @@ Sources/GitBeacon/
 
 ## Roadmap
 
-- [ ] Fill in the real GraphQL query — batched per-repo `pullRequests`
+- [x] Fill in the real GraphQL query — batched per-repo `pullRequests`
       aliases plus each head commit's check-suite status
 - [ ] A real settings window for token + watched-repo list instead of
       seeding UserDefaults/Keychain by hand
-- [ ] Map GitHub's actual review/check states onto `PullRequestStatus`
-      (currently a simplified six-state model)
+- [ ] Verify the status mapping against a live token — GitHub's actual
+      review/check states may need more nuance than the current six
 - [ ] Local notification when a watched PR's checks fail or it merges
 - [ ] Multiple status items or a compact summary when watching a lot of PRs
 

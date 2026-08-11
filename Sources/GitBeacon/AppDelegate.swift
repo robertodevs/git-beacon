@@ -1,9 +1,10 @@
 import AppKit
 import SwiftUI
 import Combine
+import UserNotifications
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem?
     private var indicatorView: BeaconIndicatorView?
     private let popover = NSPopover()
@@ -39,7 +40,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.indicatorView?.update(status: self?.state.overallStatus)
             }
 
+        NotificationService.configure(delegate: self)
+
         state.startPolling()
+    }
+
+    /// Without this, UNUserNotificationCenter suppresses banners while
+    /// GitBeacon is the frontmost app (e.g. popover open) — but a status
+    /// change is exactly when the user wants to see it.
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
     }
 
     @objc private func handleStatusItemClick() {

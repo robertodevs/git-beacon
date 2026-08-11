@@ -37,6 +37,11 @@ Build and run from Xcode. Right-click the status item → **Settings…** to
 add your GitHub token (needs `repo` read scope) and the repos you want
 watched, as `owner/name`.
 
+Notifications (checks failed / PR merged) need the app running from a
+real, registered `.app` bundle — Xcode's SwiftPM "Run" doesn't produce
+one for an `executableTarget`, so use `Scripts/run-app.sh` instead when
+testing that specifically.
+
 ## Project layout
 
 ```
@@ -53,6 +58,7 @@ Sources/GitBeacon/
   TimelineView.swift          SwiftUI dropdown list shown from the popover
   SettingsView.swift          token + watched-repo editor
   SettingsWindowController.swift  hosts SettingsView in a plain NSWindow
+  NotificationService.swift   local notifications for checksFailed/merged transitions
 ```
 
 ## Roadmap
@@ -61,10 +67,10 @@ Sources/GitBeacon/
       aliases plus each head commit's check-suite status
 - [x] A real settings window for token + watched-repo list instead of
       seeding UserDefaults/Keychain by hand
+- [x] Local notification when a watched PR's checks fail or it merges
 - [ ] Verify the status mapping against a live token across more PR
       states — GitHub's actual review/check states may need more nuance
       than the current six
-- [ ] Local notification when a watched PR's checks fail or it merges
 - [ ] Multiple status items or a compact summary when watching a lot of PRs
 
 ## License

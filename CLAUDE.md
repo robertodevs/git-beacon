@@ -15,11 +15,19 @@ timeline.
 
 - Build: `swift build`
 - Run/debug: `open Package.swift` (opens in Xcode via SwiftPM
-  integration) — building and running from Xcode is the normal path
-  since this is a GUI app; `swift run` will launch it but without a
-  proper app bundle (no Info.plist/icon), which is fine for quick
-  iteration on the status item and popover but not representative of a
-  packaged build.
+  integration), or `swift run`, both fine for quick iteration on the
+  status item and popover. Neither produces a real `.app` bundle, though
+  — Xcode's SwiftPM "Run" for an `executableTarget` is a bare Mach-O
+  binary same as `swift build`, not a packaged app (confirmed: no `.app`
+  shows up under DerivedData either way). That's enough for everything
+  except notifications.
+- Run with notifications working: `Scripts/run-app.sh` — builds, wraps
+  the binary in a throwaway `.app` bundle under `.build/`, ad-hoc
+  codesigns it, and opens it via `open`. `UNUserNotificationCenter`
+  refuses authorization ("Notifications are not allowed for this
+  application") for anything not launched as a registered, bundled app —
+  confirmed by comparing `log show --predicate 'process == "GitBeacon"'`
+  output between a direct launch and one through this script.
 - No test target exists yet.
 
 Token and watched-repo list are entered through the Settings window
@@ -80,6 +88,37 @@ the login Keychain (service `com.robertodevs.gitbeacon`, account
 `WatchedReposConfig` stores the watched-repo list (`"owner/name"`
 strings) in UserDefaults, since it isn't sensitive. Both are read
 synchronously from `GitHubGraphQLClient.fetchStatuses`.
+
+**Notifications** (`NotificationService.swift`): `BeaconState.refresh()` diffs
+the previous and newly-fetched `pullRequests` by id and fires a local
+`UNUserNotificationCenter` notification for any PR that just transitioned
+into `.checksFailed` or `.merged` — every other status change is silent.
+The very first refresh after launch is exempt (`hasCompletedFirstRefresh`)
+so already-failed/merged PRs don't all notify at once on startup.
+`AppDelegate` sets itself as the `UNUserNotificationCenterDelegate` and
+requests authorization at launch, and implements `willPresent` so banners
+still show while GitBeacon itself is frontmost (accessory apps are
+otherwise treated as "already visible" and suppressed).
+
+Two separate constraints stack here, both worked around without a full
+`.xcodeproj`:
+1. `UNUserNotificationCenter.current()` crashes with an uncaught
+   `NSInternalInconsistencyException` if `Bundle.main` has no
+   `CFBundleIdentifier` — true of any bare SwiftPM executable.
+   `Sources/GitBeacon/Info.plist` supplies one, embedded into the binary
+   via a `-sectcreate __TEXT __info_plist` linker flag in `Package.swift`
+   (`linkerSettings`). SwiftPM does **not** treat that file path as a
+   build input, so editing `Info.plist` alone doesn't trigger a relink —
+   touch a `.swift` file too, or `rm .build/debug/GitBeacon`, to force one.
+2. Even with a valid bundle identifier, `requestAuthorization` still
+   fails ("Notifications are not allowed for this application") unless
+   the binary is actually running from inside a registered `.app`
+   bundle launched via Launch Services (`open`), not exec'd directly.
+   `NotificationService` guards its entry points on
+   `Bundle.main.bundleIdentifier != nil` so a plain `swift run` degrades
+   to a log line instead of crashing, but only `Scripts/run-app.sh`
+   (see Commands) satisfies constraint 2 and gets a real notification
+   permission prompt.
 
 **Rendering** (`BeaconIndicatorView.swift`): drives two `CAShapeLayer`s
 directly on an `NSView` rather than swapping `NSStatusItem.button.image`

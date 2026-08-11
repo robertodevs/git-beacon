@@ -7,15 +7,17 @@ fifteen browser tabs open just to check if the build went green.
 The status item morphs instead of just swapping icons: a spinning arc while
 checks run, then a settled color once they land — green (passed), red
 (failed), blue (review requested), orange (changes requested), purple
-(merged). Click it for a dropdown timeline of every watched PR.
+(merged). Left-click for a dropdown timeline of every watched PR;
+right-click for Settings, a manual refresh, or Quit.
 
 ## Status
 
-Early scaffold. Status-item rendering, the polling loop, and the dropdown
-timeline are wired up, and `GitHubGraphQLClient` now sends a real batched
-query — one request per poll, aliasing every watched repo (`repo0`,
-`repo1`, ...) and pulling each open/merged PR's review decision and
-head-commit check-suite rollup. Untested against a live token so far.
+Early scaffold, but functional end to end: `GitHubGraphQLClient` sends a
+real batched query — one request per poll, aliasing every watched repo
+(`repo0`, `repo1`, ...) and pulling each open/merged PR's review decision
+and head-commit check-suite rollup — and it's confirmed working against a
+live token. Settings (token + watched repos) now has a real window
+instead of requiring a code edit.
 
 ## Requirements
 
@@ -31,13 +33,9 @@ cd git-beacon
 open Package.swift
 ```
 
-Build and run from Xcode. On first launch there's no settings UI yet —
-seed a token and repo list from a debug breakpoint or a temporary call to:
-
-```swift
-KeychainTokenStore.save("ghp_...")
-WatchedReposConfig.repos = ["robertodevs/NotchCritter", "robertodevs/git-beacon"]
-```
+Build and run from Xcode. Right-click the status item → **Settings…** to
+add your GitHub token (needs `repo` read scope) and the repos you want
+watched, as `owner/name`.
 
 ## Project layout
 
@@ -53,16 +51,19 @@ Sources/GitBeacon/
   WatchedReposConfig.swift    which repos to poll (UserDefaults-backed)
   KeychainTokenStore.swift    GitHub PAT storage via Keychain Services
   TimelineView.swift          SwiftUI dropdown list shown from the popover
+  SettingsView.swift          token + watched-repo editor
+  SettingsWindowController.swift  hosts SettingsView in a plain NSWindow
 ```
 
 ## Roadmap
 
 - [x] Fill in the real GraphQL query — batched per-repo `pullRequests`
       aliases plus each head commit's check-suite status
-- [ ] A real settings window for token + watched-repo list instead of
+- [x] A real settings window for token + watched-repo list instead of
       seeding UserDefaults/Keychain by hand
-- [ ] Verify the status mapping against a live token — GitHub's actual
-      review/check states may need more nuance than the current six
+- [ ] Verify the status mapping against a live token across more PR
+      states — GitHub's actual review/check states may need more nuance
+      than the current six
 - [ ] Local notification when a watched PR's checks fail or it merges
 - [ ] Multiple status items or a compact summary when watching a lot of PRs
 

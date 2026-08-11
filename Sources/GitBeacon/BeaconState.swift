@@ -14,6 +14,7 @@ final class BeaconState: ObservableObject {
 
     private let client = GitHubGraphQLClient()
     private var pollTask: Task<Void, Never>?
+    private var hasCompletedFirstRefresh = false
 
     func startPolling() {
         pollTask?.cancel()
@@ -32,9 +33,26 @@ final class BeaconState: ObservableObject {
 
     func refresh() async {
         do {
-            pullRequests = try await client.fetchStatuses(for: WatchedReposConfig.repos)
+            let updated = try await client.fetchStatuses(for: WatchedReposConfig.repos)
+            // Skip the very first refresh after launch (or after the watched-repo
+            // list changes) — otherwise every already-failed or already-merged PR
+            // notifies immediately instead of only on a genuine transition.
+            if hasCompletedFirstRefresh {
+                notifyTransitions(from: pullRequests, to: updated)
+            }
+            pullRequests = updated
+            hasCompletedFirstRefresh = true
         } catch {
             NSLog("GitBeacon: refresh failed — \(error)")
+        }
+    }
+
+    private func notifyTransitions(from previous: [WatchedPullRequest], to current: [WatchedPullRequest]) {
+        let previousStatusByID = Dictionary(uniqueKeysWithValues: previous.map { ($0.id, $0.status) })
+        for pr in current {
+            guard pr.status == .checksFailed || pr.status == .merged else { continue }
+            guard previousStatusByID[pr.id] != pr.status else { continue }
+            NotificationService.notify(for: pr)
         }
     }
 }

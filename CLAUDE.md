@@ -81,6 +81,23 @@ the login Keychain (service `com.robertodevs.gitbeacon`, account
 strings) in UserDefaults, since it isn't sensitive. Both are read
 synchronously from `GitHubGraphQLClient.fetchStatuses`.
 
+**Notifications** (`NotificationService.swift`): `BeaconState.refresh()` diffs
+the previous and newly-fetched `pullRequests` by id and fires a local
+`UNUserNotificationCenter` notification for any PR that just transitioned
+into `.checksFailed` or `.merged` — every other status change is silent.
+The very first refresh after launch is exempt (`hasCompletedFirstRefresh`)
+so already-failed/merged PRs don't all notify at once on startup.
+`AppDelegate` sets itself as the `UNUserNotificationCenterDelegate` and
+requests authorization at launch, and implements `willPresent` so banners
+still show while GitBeacon itself is frontmost (accessory apps are
+otherwise treated as "already visible" and suppressed). Critical
+constraint: `UNUserNotificationCenter.current()` crashes with an uncaught
+`NSInternalInconsistencyException` if the running binary has no bundle
+identifier — which is exactly what the raw `swift build`/`swift run`
+binary is (no Info.plist). `NotificationService` guards every entry point
+on `Bundle.main.bundleIdentifier != nil` and no-ops otherwise; a packaged
+`.app` (built via Xcode) is required for notifications to actually fire.
+
 **Rendering** (`BeaconIndicatorView.swift`): drives two `CAShapeLayer`s
 directly on an `NSView` rather than swapping `NSStatusItem.button.image`
 — a `dotLayer` for settled colors and a `spinnerLayer` (rotation

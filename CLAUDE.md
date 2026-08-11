@@ -22,9 +22,9 @@ timeline.
   packaged build.
 - No test target exists yet.
 
-There is no settings UI yet for the GitHub token or watched-repo list.
-To exercise the app locally, seed both by hand (see README "Getting
-started") — do not commit a real token into source when doing this.
+Token and watched-repo list are entered through the Settings window
+(right-click the status item), backed by `KeychainTokenStore` and
+`WatchedReposConfig` respectively — see README "Getting started".
 
 ## Architecture
 
@@ -35,6 +35,17 @@ started") — do not commit a real token into source when doing this.
 indicator view on every change. `GitBeaconApp.swift` is a near-empty
 `Settings` scene — nearly all app behavior lives in the delegate, not in
 SwiftUI `Scene`/`WindowGroup` code.
+
+Left-click vs. right-click on the status item is one `action` handler
+(`handleStatusItemClick`) branching on `NSApp.currentEvent?.type`, not
+two separate targets — `NSStatusItem` only exposes one action. The
+right-click menu (`showContextMenu`) is built and assigned to
+`statusItem.menu` on demand, `performClick`-triggered, then immediately
+detached; leaving a menu permanently attached would swallow left-clicks
+and break the popover toggle. `SettingsWindowController` is a plain
+`NSWindow`, not the SwiftUI `Settings` scene — accessory apps (no Dock
+icon, no app menu) don't reliably get the automatic Cmd+, handling, so
+Settings is opened directly from that right-click menu instead.
 
 **Status aggregation** (`BeaconState.swift` + `PullRequestStatus.swift`):
 `BeaconState` runs the polling loop (a `Task` sleeping for

@@ -37,6 +37,11 @@ Build and run from Xcode. Right-click the status item → **Settings…** to
 add your GitHub token (needs `repo` read scope) and the repos you want
 watched, as `owner/name`.
 
+Notifications (checks failed / PR merged) need the app running from a
+real, registered `.app` bundle — Xcode's SwiftPM "Run" doesn't produce
+one for an `executableTarget`, so use `Scripts/run-app.sh` instead when
+testing that specifically.
+
 ## Project layout
 
 ```
